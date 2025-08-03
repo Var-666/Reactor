@@ -1,0 +1,13 @@
+# ninja log v6
+2	411	1754120879627562412	CMakeFiles/test_client.dir/test_client.cpp.o.ddi	90bd84f56eab3f05
+411	423	1754120880047953711	CMakeFiles/test_client.dir/CXX.dd	d5a87ac82168302f
+411	423	1754120880047953711	/Users/var/reactor/cmake-build-debug/CMakeFiles/test_client.dir/CXXModules.json	d5a87ac82168302f
+411	423	1754120880047953711	CMakeFiles/test_client.dir/test_client.cpp.o.modmap	d5a87ac82168302f
+423	1214	1754120880048776601	CMakeFiles/test_client.dir/test_client.cpp.o	88f452fc42555dd
+1217	1293	1754120880842580767	test_client	4743b9883db5bfab
+7	382	1754121192413224952	CMakeFiles/test_client.dir/test_client.cpp.o.ddi	90bd84f56eab3f05
+382	393	1754121192787752074	CMakeFiles/test_client.dir/CXX.dd	d5a87ac82168302f
+382	393	1754121192787752074	/Users/var/reactor/cmake-build-debug/CMakeFiles/test_client.dir/CXXModules.json	d5a87ac82168302f
+382	393	1754121192787752074	CMakeFiles/test_client.dir/test_client.cpp.o.modmap	d5a87ac82168302f
+393	985	1754121192799284574	CMakeFiles/test_client.dir/test_client.cpp.o	88f452fc42555dd
+985	1054	1754121193391200633	test_client	4743b9883db5bfab

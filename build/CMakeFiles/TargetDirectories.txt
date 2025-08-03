@@ -1,0 +1,3 @@
+/home/var/reactor/build/CMakeFiles/reactor.dir
+/home/var/reactor/build/CMakeFiles/edit_cache.dir
+/home/var/reactor/build/CMakeFiles/rebuild_cache.dir
