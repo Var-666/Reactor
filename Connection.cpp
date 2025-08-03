@@ -20,7 +20,7 @@ Connection::Connection(EventLoop *loop, int connfd) : loop_(loop),socket_(connfd
 
 Connection::~Connection() {
     if (state_ == State::Connected) {
-        handleClose();  // 或者调用 shutdown()
+        handleClose();
     }
 }
 
