@@ -4,12 +4,18 @@
 
 #include "EventLoop.h"
 #include "Channel.h"
+#include "TimerQueue.h"
 #include <iostream>
 #include <unistd.h>
 #include <string>
 #include <sys/eventfd.h>
 
-EventLoop::EventLoop():looping_(false),quit_(false),threadID_(std::this_thread::get_id()) {
+EventLoop::EventLoop()
+    :looping_(false),
+    quit_(false),
+    threadID_(std::this_thread::get_id()),
+    timerQueue_(std::make_unique<TimerQueue>(this)) {
+
     wakeupFd_ = ::eventfd(0,EFD_NONBLOCK | EFD_CLOEXEC);
     if (wakeupFd_ <= 0) {
         perror("eventfd error");
@@ -96,6 +102,22 @@ void EventLoop::handleRead() const {
     if (n != sizeof(one)) {
         perror("EventLoop::handleRead read error");
     }
+}
+
+void EventLoop::runAfter(double delay, std::function<void()> cb) const {
+    auto when = std::chrono::steady_clock::now() +
+            std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                std::chrono::duration<double>(delay)
+            );
+    timerQueue_->addTimer(std::move(cb), when, 0.0);
+}
+
+void EventLoop::runEvery(double interval, std::function<void()> cb) const {
+    auto when = std::chrono::steady_clock::now() +
+            std::chrono::duration_cast<std::chrono::steady_clock::duration>(
+                std::chrono::duration<double>(interval)
+            );
+    timerQueue_->addTimer(std::move(cb), when, interval);
 }
 
 void EventLoop::doPendingFunctors() {

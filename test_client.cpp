@@ -14,7 +14,7 @@
 #include <cstring>
 #include <chrono>
 
-// 客户端线程函数
+//客户端线程函数
 void clientThread(int id, const std::string& server_ip, int server_port) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
@@ -80,3 +80,36 @@ int main() {
     std::cout << "All clients finished.\n";
     return 0;
 }
+#include <arpa/inet.h>
+#include <unistd.h>
+#include <iostream>
+#include <cstring>
+
+#include "Timer.h"
+
+// int main() {
+//     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
+//     sockaddr_in servaddr{};
+//     servaddr.sin_family = AF_INET;
+//     servaddr.sin_port = htons(8080);  // 服务器端口
+//     inet_pton(AF_INET, "172.16.97.131", &servaddr.sin_addr);
+//
+//     if (connect(sockfd, (sockaddr*)&servaddr, sizeof(servaddr)) < 0) {
+//         std::cerr << "Connect failed\n";
+//         return 1;
+//     }
+//
+//     std::cout << "Connected to server\n";
+//
+//     for (int i = 0; i < 5; ++i) {
+//         const char* msg = "hello\n";
+//         send(sockfd, msg, strlen(msg), 0);
+//         std::cout << "Sent message: " << msg;
+//         sleep(2);  // 每2秒发一次，保持活跃
+//     }
+//     // sleep(20);
+//     std::cout << "Closing connection\n";
+//     close(sockfd);
+//     return 0;
+// }
+

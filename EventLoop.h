@@ -13,6 +13,7 @@
 
 #include "Epoller.h"
 #include "Channel.h"
+#include "TimerQueue.h"
 
 class EventLoop {
 public:
@@ -32,6 +33,9 @@ public:
     void wakeup() const;
     void handleRead() const;
 
+    void runAfter(double delay,std::function<void()> cb) const;
+    void runEvery(double interval,std::function<void()> cb) const;
+
 private:
     void doPendingFunctors();
     std::atomic<bool> looping_;
@@ -46,6 +50,7 @@ private:
     std::mutex mutex_;
     std::thread::id threadID_;
     std::queue<std::function<void()>> pendingFunctors_;
+    std::unique_ptr<TimerQueue> timerQueue_;
 };
 
 

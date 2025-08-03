@@ -8,7 +8,8 @@
 Server::Server(EventLoop *loop, const InetAddress &listenAddr)
     :loop_(loop),
     acceptor_(loop,listenAddr),
-    threadPool_(std::make_unique<EventLoopThreadPool>(loop,"ServerThreadPool")){
+    threadPool_(std::make_unique<EventLoopThreadPool>(loop,"ServerThreadPool")),
+    timeoutManager_(loop_,10){
 
     acceptor_.setNewConnectionCallback(
         [this](int connfd,const InetAddress& peerAddr) {
@@ -44,6 +45,15 @@ void Server::newConnection(int connfd, const InetAddress &peerAddr) {
     auto conn = std::make_shared<Connection>(ioLoop,connfd);
     connections_[connfd] = conn;
 
+    // 1. 添加连接到超时管理器
+    timeoutManager_.addConnection(conn);
+
+    // 2. 设置活动回调（用于刷新连接时间）
+    conn->setActivityCallback(
+        [this](int fd) {
+            timeoutManager_.updateConnectionActivity(fd);
+        });
+
     if (connectionCallback_) {
         connectionCallback_(conn);
     }
@@ -66,5 +76,6 @@ void Server::removeConnection(const Connection::Ptr &conn) {
     ioLoop->runInLoopThread(
         [this,conn]() {
             connections_.erase(conn->fd());
+            timeoutManager_.removeConnection(conn->fd()); // ✅ 移除连接
         });
 }

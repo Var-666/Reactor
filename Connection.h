@@ -15,6 +15,7 @@
 class Connection : public std::enable_shared_from_this<Connection> {
 public:
     using Ptr = std::shared_ptr<Connection>;
+    using ActivityCallback = std::function<void(int)>;
 
     using MessageCallback = std::function<void(const Ptr&,const std::string&)>;
     using CloseCallback = std::function<void(const Ptr&)>;
@@ -30,6 +31,8 @@ public:
     void enableRead();
     EventLoop* getLoop() const;
     void connectEstablished();
+
+    void setActivityCallback(ActivityCallback cb);
 
     int fd() const;
 private:
@@ -52,6 +55,7 @@ private:
 
     MessageCallback messageCallback_;
     CloseCallback closeCallback_;
+    ActivityCallback updateActivityCallback_;
 
     State state_;
 };

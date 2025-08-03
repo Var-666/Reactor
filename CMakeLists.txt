@@ -10,6 +10,9 @@ add_executable(reactor main.cpp Server.cpp Socket.cpp Connection.cpp EventLoop.c
         Acceptor.cpp
         EventLoopThread.cpp
         EventLoopThreadPool.cpp
+        ConnectionTimeoutManager.cpp
+        Timer.cpp
+        TimerQueue.cpp
 )
 
 add_executable(test_client test_client.cpp)

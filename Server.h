@@ -14,6 +14,7 @@
 #include "Acceptor.h"
 #include "Connection.h"
 #include "EventLoopThreadPool.h"
+#include "ConnectionTimeoutManager.h"
 
 class Server {
 public:
@@ -42,6 +43,7 @@ private:
 
     ConnectionCallback connectionCallback_;
     MessageCallback messageCallback_;
+    ConnectionTimeoutManager timeoutManager_;
 };
 
 

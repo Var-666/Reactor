@@ -74,6 +74,10 @@ void Connection::connectEstablished() {
     channel_.enableRead();              // 真正开始监听读事件
 }
 
+void Connection::setActivityCallback(ActivityCallback cb) {
+    updateActivityCallback_ = std::move(cb);
+}
+
 int Connection::fd() const {
     return socket_.fd();
 }
@@ -109,6 +113,11 @@ void Connection::handleRead() {
     char buf[4096];
     ssize_t n = ::read(socket_.fd(), buf, sizeof(buf));
     if (n > 0) {
+
+        if (updateActivityCallback_) {
+            updateActivityCallback_(fd());  // ✅ 更新活跃时间
+        }
+
         inputBuffer_.append(buf, n);
         if (messageCallback_) {
             messageCallback_(shared_from_this(), inputBuffer_);
@@ -142,8 +151,14 @@ void Connection::handleWrite() {
 }
 
 void Connection::handleClose() {
+    if (state_ == State::Disconnected) {
+        // 已经关闭，直接返回，避免重复处理
+        return;
+    }
+    std::cout << "handleClose called for fd=" << fd() << std::endl;
     state_ = State::Disconnected;
     loop_->removeChannel(&channel_);
+    std::cout << "Channel removed for fd=" << fd() << std::endl;
     if (closeCallback_) {
         closeCallback_(shared_from_this());
     }
