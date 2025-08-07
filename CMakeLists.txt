@@ -19,6 +19,7 @@ add_executable(reactor
         src/ConnectionTimeoutManager.cpp
         src/Timer.cpp
         src/TimerQueue.cpp
+        src/Buffer.cpp
 )
 
 add_executable(test_client test_client.cpp)

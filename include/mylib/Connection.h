@@ -11,6 +11,7 @@
 #include "Channel.h"
 #include "Socket.h"
 #include "EventLoop.h"
+#include "Buffer.h"
 
 class Connection : public std::enable_shared_from_this<Connection> {
 public:
@@ -50,8 +51,8 @@ private:
     Socket socket_;
     Channel channel_;
 
-    std::string inputBuffer_;
-    std::string outputBuffer_;
+    Buffer inputBuffer_;
+    Buffer outputBuffer_;
 
     MessageCallback messageCallback_;
     CloseCallback closeCallback_;

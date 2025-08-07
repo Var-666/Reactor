@@ -87,20 +87,25 @@ void Connection::sendInLoop(const std::string &data) {
         return;
     }
     ssize_t n = 0;
-    if (outputBuffer_.empty()) {
-        n = ::write(socket_.fd(), data.c_str(), data.size());
-        if (n < 0) {
-            if (errno != EWOULDBLOCK) {
-                std::cerr << "Send error\n";
-                handleError();
+    if (outputBuffer_.readableBytes() == 0) {
+        n = ::write(socket_.fd(), data.data(), data.size());
+        if (n >= 0) {
+            if (static_cast<size_t>(n) == data.size()) {
+                // 全部写完，直接返回
+                return;
             }
+        } else {
             n = 0;
+            if (errno != EWOULDBLOCK && errno != EAGAIN) {
+                std::cerr << "send error, fd=" << socket_.fd() << std::endl;
+                handleError();
+                return;
+            }
         }
     }
-    if (n < static_cast<ssize_t>(data.size())) {
-        outputBuffer_ +=data.substr(n);
-        channel_.enableWrite();
-    }
+    // 剩余数据写不完，追加到 outputBuffer_，等待写事件触发继续写
+    outputBuffer_.append(data.data() + n, data.size() - n);
+    channel_.enableWrite();
 }
 
 void Connection::shutdownInLoop() {
@@ -111,7 +116,8 @@ void Connection::shutdownInLoop() {
 
 void Connection::handleRead() {
     char buf[4096];
-    ssize_t n = ::read(socket_.fd(), buf, sizeof(buf));
+    int savedErrno = 0;
+    ssize_t n = inputBuffer_.readFd(socket_.fd(), &savedErrno);
     if (n > 0) {
 
         if (updateActivityCallback_) {
@@ -120,23 +126,23 @@ void Connection::handleRead() {
 
         inputBuffer_.append(buf, n);
         if (messageCallback_) {
-            messageCallback_(shared_from_this(), inputBuffer_);
+            std::string msg = inputBuffer_.retrieveAllAsString();
+            messageCallback_(shared_from_this(), msg);
         }
-        inputBuffer_.clear();   // 简化：一次性处理，真实项目可能需要保留
     }else if (n == 0) {
         handleClose();
     }else {
-        if (errno != EAGAIN && errno != EWOULDBLOCK) {
+        if (savedErrno != EAGAIN && errno != EWOULDBLOCK) {
             handleError();
         }
     }
 }
 
 void Connection::handleWrite() {
-    ssize_t n = ::write(socket_.fd(), outputBuffer_.data(), outputBuffer_.size());
+    ssize_t n = ::write(socket_.fd(), outputBuffer_.peek(), outputBuffer_.readableBytes());
     if (n > 0) {
-        outputBuffer_.erase(0,n);
-        if (outputBuffer_.empty()) {
+        outputBuffer_.retrieve(n);
+        if (outputBuffer_.readableBytes() == 0) {
             channel_.disableWrite();
             if (state_ == State::Disconnected) {
                 shutdownInLoop();
