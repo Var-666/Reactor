@@ -12,6 +12,8 @@
 #include "Socket.h"
 #include "EventLoop.h"
 #include "Buffer.h"
+#include "Codec.h"
+#include "protocol/IProtocol.h"
 
 class Connection : public std::enable_shared_from_this<Connection> {
 public:
@@ -33,6 +35,8 @@ public:
     EventLoop* getLoop() const;
     void connectEstablished();
 
+    void setCodec(std::shared_ptr<Codec> codec);
+
     void setActivityCallback(ActivityCallback cb);
 
     int fd() const;
@@ -53,6 +57,10 @@ private:
 
     Buffer inputBuffer_;
     Buffer outputBuffer_;
+
+    std::shared_ptr<IProtocol> protocol_;
+    std::shared_ptr<Codec> codec_;
+
 
     MessageCallback messageCallback_;
     CloseCallback closeCallback_;

@@ -1,115 +1,103 @@
-//
-// Created by Var on 25-8-2.
-//
-// test_client.cpp
+#include <string>
+
+const std::string server_ip = "172.16.97.131";
+const int server_port = 8080;
 
 #include <iostream>
 #include <thread>
 #include <vector>
-#include <string>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <arpa/inet.h>
 #include <sys/socket.h>
+#include <arpa/inet.h>
+#include <unistd.h>
 #include <cstring>
-#include <chrono>
 
-//客户端线程函数
-void clientThread(int id, const std::string& server_ip, int server_port) {
+#include "mylib/Buffer.h"
+#include "mylib/Codec.h"
+#include "protocol/LengthHeaderProtocol.h"
+
+void clientTask(const std::string& ip, uint16_t port, int id) {
     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
-        std::cerr << "Client " << id << " socket creation failed\n";
+        perror("socket");
         return;
     }
 
-    sockaddr_in serv_addr{};
-    serv_addr.sin_family = AF_INET;
-    serv_addr.sin_port = htons(server_port);
-    if (inet_pton(AF_INET, server_ip.c_str(), &serv_addr.sin_addr) <= 0) {
-        std::cerr << "Client " << id << " invalid address\n";
+    sockaddr_in servaddr{};
+    servaddr.sin_family = AF_INET;
+    servaddr.sin_port = htons(port);
+    inet_pton(AF_INET, ip.c_str(), &servaddr.sin_addr);
+
+    if (connect(sockfd, (sockaddr*)&servaddr, sizeof(servaddr)) < 0) {
+        perror("connect");
         close(sockfd);
         return;
     }
 
-    if (connect(sockfd, (sockaddr*)&serv_addr, sizeof(serv_addr)) < 0) {
-        std::cerr << "Client " << id << " connect failed\n";
+    Buffer inputBuffer;
+    auto protocol = std::make_shared<LengthHeaderProtocol>();
+    Codec codec(protocol);
+
+    // 连续发送多条消息（制造粘包）
+    std::vector<std::string> messages = {
+        "Hello from client " + std::to_string(id) + " msg1",
+        "Hello from client " + std::to_string(id) + " msg2",
+        "Hello from client " + std::to_string(id) + " msg3"
+    };
+
+    // 拼接编码后的数据，一次性发出去，模拟粘包
+    std::string sendData;
+    for (auto& msg : messages) {
+        sendData += codec.encode(msg);
+    }
+
+    ssize_t n = write(sockfd, sendData.data(), sendData.size());
+    if (n < 0) {
+        perror("write");
         close(sockfd);
         return;
     }
+    std::cout << "Client " << id << " sent " << n << " bytes\n";
 
-    std::cout << "Client " << id << " connected to server\n";
-
-    for (int i = 0; i < 10; ++i) {
-        std::string msg = "Client " + std::to_string(id) + ": hello " + std::to_string(i) + "\n";
-        send(sockfd, msg.c_str(), msg.size(), 0);
-
-        char buf[1024];
-        ssize_t n = recv(sockfd, buf, sizeof(buf) - 1, 0);
-        if (n > 0) {
-            buf[n] = '\0';
-            std::cout << "Client " << id << " received: " << buf;
-        } else if (n == 0) {
-            std::cerr << "Client " << id << " server closed connection\n";
+    // 接收服务器响应，拆包打印
+    char buf[4096];
+    while (true) {
+        ssize_t nr = read(sockfd, buf, sizeof(buf));
+        if (nr > 0) {
+            inputBuffer.append(buf, nr);
+            std::vector<std::string> recvMsgs;
+            while (codec.decode(inputBuffer, recvMsgs)) {
+                for (auto& m : recvMsgs) {
+                    std::cout << "Client " << id << " recv: " << m << std::endl;
+                }
+                recvMsgs.clear();
+            }
+        } else if (nr == 0) {
+            std::cout << "Client " << id << " server closed connection\n";
             break;
         } else {
-            std::cerr << "Client " << id << " recv failed\n";
+            perror("read");
             break;
         }
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(100)); // 模拟延迟
     }
 
     close(sockfd);
-    std::cout << "Client " << id << " disconnected\n";
 }
 
 int main() {
-    const std::string server_ip = "172.16.97.131";
-    const int server_port = 8080;
-    const int client_count = 5;  // 并发连接数量
+    // std::string serverIp = "127.0.0.1";
+    // uint16_t serverPort = 8888;
 
-    std::vector<std::thread> threads;
-    for (int i = 0; i < client_count; ++i) {
-        threads.emplace_back(clientThread, i, server_ip, server_port);
+    // 启动多个线程模拟多客户端连接
+    const int clientCount = 5;
+    std::vector<std::thread> clients;
+
+    for (int i = 0; i < clientCount; ++i) {
+        clients.emplace_back(clientTask, server_ip, server_port, i + 1);
     }
 
-    for (auto& t : threads) {
+    for (auto& t : clients) {
         t.join();
     }
 
-    std::cout << "All clients finished.\n";
     return 0;
 }
-#include <arpa/inet.h>
-#include <unistd.h>
-#include <iostream>
-#include <cstring>
-
-#include "mylib/Timer.h"
-
-// int main() {
-//     int sockfd = socket(AF_INET, SOCK_STREAM, 0);
-//     sockaddr_in servaddr{};
-//     servaddr.sin_family = AF_INET;
-//     servaddr.sin_port = htons(8080);  // 服务器端口
-//     inet_pton(AF_INET, "172.16.97.131", &servaddr.sin_addr);
-//
-//     if (connect(sockfd, (sockaddr*)&servaddr, sizeof(servaddr)) < 0) {
-//         std::cerr << "Connect failed\n";
-//         return 1;
-//     }
-//
-//     std::cout << "Connected to server\n";
-//
-//     for (int i = 0; i < 5; ++i) {
-//         const char* msg = "hello\n";
-//         send(sockfd, msg, strlen(msg), 0);
-//         std::cout << "Sent message: " << msg;
-//         sleep(2);  // 每2秒发一次，保持活跃
-//     }
-//     // sleep(20);
-//     std::cout << "Closing connection\n";
-//     close(sockfd);
-//     return 0;
-// }
-

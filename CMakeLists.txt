@@ -20,6 +20,12 @@ add_executable(reactor
         src/Timer.cpp
         src/TimerQueue.cpp
         src/Buffer.cpp
+        include/protocol/IProtocol.h
+        src/LengthHeaderProtocol.cpp
+        src/Codec.cpp
 )
 
-add_executable(test_client test_client.cpp)
+add_executable(test_client test_client.cpp
+        src/Buffer.cpp
+        src/Codec.cpp
+        src/LengthHeaderProtocol.cpp)

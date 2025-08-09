@@ -3,6 +3,7 @@
 //
 
 #include "mylib/Connection.h"
+#include "protocol/LengthHeaderProtocol.h"
 
 #include <unistd.h>
 #include <iostream>
@@ -11,11 +12,19 @@
 #include <cassert>
 #include <memory>
 
-Connection::Connection(EventLoop *loop, int connfd) : loop_(loop),socket_(connfd),channel_(loop,connfd),state_(State::Connected){
+Connection::Connection(EventLoop *loop, int connfd)
+    : loop_(loop),
+    socket_(connfd),
+    channel_(loop,connfd),
+    state_(State::Connected){
     channel_.setReadCallback(std::bind(&Connection::handleRead,this));
     channel_.setWriteCallback(std::bind(&Connection::handleWrite, this));
     channel_.setCloseCallback(std::bind(&Connection::handleClose, this));
     channel_.setErrorCallback(std::bind(&Connection::handleError, this));
+
+    protocol_ = std::make_shared<LengthHeaderProtocol>();
+    codec_ = std::make_shared<Codec>(protocol_);
+
 }
 
 Connection::~Connection() {
@@ -36,11 +45,17 @@ void Connection::send(const std::string &data) {
     if (state_ == State::Disconnected) {
         return;
     }
+    std::string packet;
+    if (codec_) {
+        packet = codec_->encode(data);  // 先编码
+    } else {
+        packet = data;                  // 没有协议，直接发数据
+    }
     if (loop_->isInLoopThread()) {
-        sendInLoop(data);
+        sendInLoop(packet);
     }else {
-        loop_->runInLoopThread([self= shared_from_this(),data]() {
-            self->sendInLoop(data);
+        loop_->runInLoopThread([self= shared_from_this(),packet]() {
+            self->sendInLoop(packet);
         });
     }
 }
@@ -72,6 +87,10 @@ void Connection::connectEstablished() {
 
     channel_.tie(shared_from_this());
     channel_.enableRead();              // 真正开始监听读事件
+}
+
+void Connection::setCodec(std::shared_ptr<Codec> codec) {
+    codec_ = std::move(codec);
 }
 
 void Connection::setActivityCallback(ActivityCallback cb) {
@@ -115,19 +134,29 @@ void Connection::shutdownInLoop() {
 }
 
 void Connection::handleRead() {
-    char buf[4096];
     int savedErrno = 0;
     ssize_t n = inputBuffer_.readFd(socket_.fd(), &savedErrno);
     if (n > 0) {
-
         if (updateActivityCallback_) {
             updateActivityCallback_(fd());  // ✅ 更新活跃时间
         }
 
-        inputBuffer_.append(buf, n);
-        if (messageCallback_) {
-            std::string msg = inputBuffer_.retrieveAllAsString();
-            messageCallback_(shared_from_this(), msg);
+        if (codec_) {
+            std::vector<std::string> messages;
+            bool hasMsg = codec_->decode(inputBuffer_, messages);
+
+            if (hasMsg) {
+                for (auto& msg : messages) {
+                    if (messageCallback_) {
+                        messageCallback_(shared_from_this(), msg);
+                    }
+                }
+            }
+        }else {
+            if (messageCallback_) {
+                std::string msg = inputBuffer_.retrieveAllAsString();
+                messageCallback_(shared_from_this(), msg);
+            }
         }
     }else if (n == 0) {
         handleClose();
@@ -153,7 +182,6 @@ void Connection::handleWrite() {
             handleError();
         }
     }
-
 }
 
 void Connection::handleClose() {
