@@ -8,8 +8,10 @@
 Server::Server(EventLoop *loop, const InetAddress &listenAddr)
     :loop_(loop),
     acceptor_(loop,listenAddr),
-    threadPool_(std::make_unique<EventLoopThreadPool>(loop,"ServerThreadPool")),
+    threadNum_(5),
     timeoutManager_(loop_,10){
+
+    ServerWithThreadPools(loop);   //设置IO线程和业务线程
 
     acceptor_.setNewConnectionCallback(
         [this](int connfd,const InetAddress& peerAddr) {
@@ -18,12 +20,11 @@ Server::Server(EventLoop *loop, const InetAddress &listenAddr)
 
 }
 
-Server::~Server() {
-}
+Server::~Server() = default;
 
 void Server::start() {
-    threadPool_->setThreadNum(threadNum_);
-    threadPool_->start();
+    // ioThreadPool_->setThreadNum(threadNum_);
+    // ioThreadPool_->start();
     acceptor_.listen();
 }
 
@@ -40,7 +41,7 @@ void Server::setMessageCallback(const MessageCallback &cb) {
 }
 
 void Server::newConnection(int connfd, const InetAddress &peerAddr) {
-    EventLoop *ioLoop = threadPool_->getNextLoop();
+    EventLoop *ioLoop = ioThreadPool_->getNextLoop();
 
     auto conn = std::make_shared<Connection>(ioLoop,connfd);
     connections_[connfd] = conn;
@@ -58,7 +59,17 @@ void Server::newConnection(int connfd, const InetAddress &peerAddr) {
         connectionCallback_(conn);
     }
 
-    conn->setMessageCallback(messageCallback_);
+    // 业务消息回调改造，异步执行业务逻辑
+    conn->setMessageCallback(
+        [this](const Connection::Ptr &conn, const std::string &msg) {
+            businessThreadPool_->submit([this, conn, msg]() {
+                if (messageCallback_) {
+                    messageCallback_(conn, msg);  // 真正业务处理
+                }
+                // 这里可以根据业务需要调用 conn->send(...)
+            });
+        }
+    );
 
     conn->setCloseCallback(
         [this](const Connection::Ptr &conn) {
@@ -78,4 +89,20 @@ void Server::removeConnection(const Connection::Ptr &conn) {
             connections_.erase(conn->fd());
             timeoutManager_.removeConnection(conn->fd()); // ✅ 移除连接
         });
+}
+
+void Server::ServerWithThreadPools(EventLoop *loop) {
+    unsigned int threadNum = std::thread::hardware_concurrency();
+    if (threadNum == 0) {
+        threadNum = 4;
+    }
+    // IO线程数 = cpu核数 * 2 (可调)
+    const size_t ioThreadNum = threadNum * 2;
+    ioThreadPool_ = std::make_unique<EventLoopThreadPool>(loop,"ServerThreadPool");
+    ioThreadPool_->setThreadNum(ioThreadNum);
+    ioThreadPool_->start();
+
+    // 业务线程池数 = cpu核数 * 3 (可调)
+    size_t businessThreadNum = threadNum * 3;
+    businessThreadPool_ = std::make_unique<ThreadPool>(businessThreadNum);
 }

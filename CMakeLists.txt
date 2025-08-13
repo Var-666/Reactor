@@ -23,6 +23,7 @@ add_executable(reactor
         include/protocol/IProtocol.h
         src/LengthHeaderProtocol.cpp
         src/Codec.cpp
+        src/ThreadPool.cpp
 )
 
 add_executable(test_client test_client.cpp

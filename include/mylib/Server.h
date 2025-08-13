@@ -15,6 +15,7 @@
 #include "Connection.h"
 #include "EventLoopThreadPool.h"
 #include "ConnectionTimeoutManager.h"
+#include "ThreadPool.h"
 
 class Server {
 public:
@@ -33,10 +34,12 @@ public:
 private:
     void newConnection(int connfd, const InetAddress& peerAddr);
     void removeConnection(const Connection::Ptr& conn);
+    void ServerWithThreadPools(EventLoop* loop);   //配置IO线程池和业务线程池
 
     EventLoop* loop_;
     Acceptor acceptor_;
-    std::unique_ptr<EventLoopThreadPool> threadPool_;
+    std::unique_ptr<EventLoopThreadPool> ioThreadPool_;
+    std::unique_ptr<ThreadPool> businessThreadPool_;
     int threadNum_;
 
     std::unordered_map<int, Connection::Ptr> connections_;

@@ -89,3 +89,35 @@ Channel 就是这个面板，它会告诉系统：“这个 fd 如果读事件�
 
 ⸻
 
+
+已实现功能清单
+1.	Reactor 基础框架
+-	事件循环（EventLoop）
+-	事件分发（Epoller）
+-	事件通道（Channel）
+2.	网络通信模块
+-	TCP Socket 封装
+-	连接管理（Connection 类）
+-	接受新连接（Acceptor）
+3.	单线程版本的 Reactor 服务器
+-	事件驱动模型实现客户端连接和消息收发
+-	读写事件处理与回调机制
+4.	多线程支持
+-	EventLoopThread 类：为每个线程维护独立的事件循环
+-	EventLoopThreadPool 类：线程池管理多个 EventLoopThread
+-	服务器多线程分发连接到不同线程处理
+5.	连接超时管理
+-	独立的 ConnectionTimeoutManager 类
+-	定时检测空闲连接并主动关闭
+6.	Buffer 类设计与实现
+-	高效缓冲区管理，支持零拷贝读写
+-	支持从文件描述符读取数据，管理可读/可写空间
+7.	协议层拆包粘包处理（策略模式实现）
+-	抽象协议接口 IProtocol
+-	具体协议实现如 LengthHeaderProtocol（包头 + 包体长度）
+-	Codec 上下文类，实现灵活协议切换
+-	支持消息完整解析和业务层解耦
+
+⸻
+
+

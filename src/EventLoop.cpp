@@ -46,7 +46,7 @@ void EventLoop::loop() {
 
     while(!quit_) {
         std::vector<Channel*> activeChannels_= epoller_.poll(1000);
-        for (auto channel : activeChannels_) {
+        for (const auto channel : activeChannels_) {
             channel->handleEvent();
         }
         doPendingFunctors();
@@ -104,16 +104,16 @@ void EventLoop::handleRead() const {
     }
 }
 
-void EventLoop::runAfter(double delay, std::function<void()> cb) const {
-    auto when = std::chrono::steady_clock::now() +
+void EventLoop::runAfter(const double delay, std::function<void()> cb) const {
+    const auto when = std::chrono::steady_clock::now() +
             std::chrono::duration_cast<std::chrono::steady_clock::duration>(
                 std::chrono::duration<double>(delay)
             );
     timerQueue_->addTimer(std::move(cb), when, 0.0);
 }
 
-void EventLoop::runEvery(double interval, std::function<void()> cb) const {
-    auto when = std::chrono::steady_clock::now() +
+void EventLoop::runEvery(const double interval, std::function<void()> cb) const {
+    const auto when = std::chrono::steady_clock::now() +
             std::chrono::duration_cast<std::chrono::steady_clock::duration>(
                 std::chrono::duration<double>(interval)
             );

@@ -9,7 +9,7 @@ int main() {
     EventLoop loop;
 
     Server server(&loop, listenAddr);
-    server.setNumThreads(4);
+    // server.setNumThreads(4);
     server.setMessageCallback(
         [](const Connection::Ptr& conn, const std::string& msg) {
             std::cout << "Received: " << msg << std::endl;

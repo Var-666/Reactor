@@ -2,19 +2,20 @@
 // Created by Var on 25-8-2.
 //
 
+#include <utility>
+
 #include "mylib/EventLoopThreadPool.h"
 
-EventLoopThreadPool::EventLoopThreadPool(EventLoop *baseLoop, const std::string &name,int numThreads)
+EventLoopThreadPool::EventLoopThreadPool(EventLoop *baseLoop, std::string name,int numThreads)
     :baseLoop_(baseLoop),
-    name_(name),
+    name_(std::move(name)),
     started_(false),
     numThreads_(numThreads),
     next_(0){ }
 
-EventLoopThreadPool::~EventLoopThreadPool() {
-}
+EventLoopThreadPool::~EventLoopThreadPool() = default;
 
-void EventLoopThreadPool::setThreadNum(int numThreads) {
+void EventLoopThreadPool::setThreadNum(const size_t numThreads) {
     numThreads_ = numThreads;
 }
 
@@ -26,7 +27,7 @@ void EventLoopThreadPool::start(const ThreadInitCallback &cb) {
         auto thread = std::make_unique<EventLoopThread>(cb);
         EventLoop *loop = thread->startLoop();
         threads_.push_back(std::move(thread));
-        loops_.push_back(std::move(loop));
+        loops_.push_back(loop);
     }
 
     if (numThreads_ == 0 && cb) {

@@ -4,6 +4,7 @@
 
 #include "protocol/LengthHeaderProtocol.h"
 #include <cstring>
+#include <stdexcept>
 
 LengthHeaderProtocol::LengthHeaderProtocol(size_t headerLen):headerLen_(headerLen) {
 }
@@ -17,6 +18,13 @@ bool LengthHeaderProtocol::decode(Buffer &buffer, std::string &msg) {
     uint32_t bodyLen = 0;
     std::memcpy(&bodyLen, data, headerLen_);
     bodyLen = ntohl(bodyLen);
+
+    // 限制最大包长，防止恶意攻击
+    const uint32_t maxBodyLen = 64 * 1024 * 1024; // 64MB
+    if (bodyLen > maxBodyLen) {
+        // 直接丢弃或者触发错误处理
+        throw std::runtime_error("Body length too large");
+    }
 
     if (buffer.readableBytes() < headerLen_ + bodyLen) {
         return false;

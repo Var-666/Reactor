@@ -2,11 +2,13 @@
 // Created by Var on 25-8-1.
 //
 
+#include <utility>
+
 #include "mylib/EventLoopThread.h"
 
 #include "mylib/EventLoop.h"
 
-EventLoopThread::EventLoopThread(const ThreadInitCallback &cb):loop_(nullptr),exiting_(false),thread_(),callback_(cb) {
+EventLoopThread::EventLoopThread(const ThreadInitCallback& cb):loop_(nullptr),exiting_(false),thread_(),callback_(std::move(cb)) {
 
 }
 

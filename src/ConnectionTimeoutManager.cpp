@@ -10,10 +10,9 @@ ConnectionTimeoutManager::ConnectionTimeoutManager(EventLoop *loop, int timeoutS
     loop_->runEvery(1.0,[this](){checkTimeout();});
 }
 
-ConnectionTimeoutManager::~ConnectionTimeoutManager() {
-}
+ConnectionTimeoutManager::~ConnectionTimeoutManager() = default;
 
-void ConnectionTimeoutManager::addConnection(std::shared_ptr<Connection> conn) {
+void ConnectionTimeoutManager::addConnection(const std::shared_ptr<Connection>& conn) {
     int fd = conn->fd();
     connections_[fd] = connInfo{
         .conn = conn,

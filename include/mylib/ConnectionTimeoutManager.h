@@ -22,7 +22,7 @@ public:
     ConnectionTimeoutManager(EventLoop *loop,int timeoutSecond);
     ~ConnectionTimeoutManager();
 
-    void addConnection(std::shared_ptr<Connection> conn);
+    void addConnection(const std::shared_ptr<Connection>& conn);
     void updateConnectionActivity(int connfd);
     void removeConnection(int connfd);
 private:

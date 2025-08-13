@@ -17,10 +17,10 @@ Connection::Connection(EventLoop *loop, int connfd)
     socket_(connfd),
     channel_(loop,connfd),
     state_(State::Connected){
-    channel_.setReadCallback(std::bind(&Connection::handleRead,this));
-    channel_.setWriteCallback(std::bind(&Connection::handleWrite, this));
-    channel_.setCloseCallback(std::bind(&Connection::handleClose, this));
-    channel_.setErrorCallback(std::bind(&Connection::handleError, this));
+    channel_.setReadCallback([this] { handleRead(); });
+    channel_.setWriteCallback([this] { handleWrite(); });
+    channel_.setCloseCallback([this] { handleClose(); });
+    channel_.setErrorCallback([this] { handleError(); });
 
     protocol_ = std::make_shared<LengthHeaderProtocol>();
     codec_ = std::make_shared<Codec>(protocol_);
@@ -154,7 +154,7 @@ void Connection::handleRead() {
             }
         }else {
             if (messageCallback_) {
-                std::string msg = inputBuffer_.retrieveAllAsString();
+                const std::string msg = inputBuffer_.retrieveAllAsString();
                 messageCallback_(shared_from_this(), msg);
             }
         }
