@@ -3,6 +3,7 @@
 //
 
 #include "mylib/ThreadPool.h"
+#include <iostream>
 
 ThreadPool::ThreadPool(size_t thread_num):running_(true) {
     for (size_t i = 0; i < thread_num; i++) {
@@ -15,6 +16,10 @@ ThreadPool::~ThreadPool() {
 }
 
 void ThreadPool::submit(std::function<void()> task) {
+    if (!task) {
+        std::cerr << "Error: submit empty task!" << std::endl;
+        return;  // 或者直接抛异常，方便尽早定位
+    }
     {
         std::unique_lock<std::mutex> lock(mutex_);
         tasks_.push(std::move(task));
@@ -38,7 +43,7 @@ void ThreadPool::workerThread() {
         {
             std::unique_lock<std::mutex> lock(mutex_);
             condition_.wait(lock,[this] {
-                return !tasks_.empty() || running_;
+                return !tasks_.empty() || !running_;
             });
 
             if (!running_ && tasks_.empty()) {
@@ -47,6 +52,10 @@ void ThreadPool::workerThread() {
 
             task = std::move(tasks_.front());
             tasks_.pop();
+        }
+        if (!task) {
+            std::cerr << "Warning: empty task encountered!" << std::endl;
+            continue;
         }
         task();
     }

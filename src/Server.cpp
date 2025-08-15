@@ -61,19 +61,20 @@ void Server::newConnection(int connfd, const InetAddress &peerAddr) {
 
     // 业务消息回调改造，异步执行业务逻辑
     conn->setMessageCallback(
-        [this](const Connection::Ptr &conn, const std::string &msg) {
-            businessThreadPool_->submit([this, conn, msg]() {
-                if (messageCallback_) {
-                    messageCallback_(conn, msg);  // 真正业务处理
-                }
-                // 这里可以根据业务需要调用 conn->send(...)
+        [self = shared_from_this()](const Connection::Ptr &conn, const std::string &msg) {
+            if (!self->messageCallback_) {
+                std::cerr << "messageCallback_ empty!" << std::endl;
+                return;
+            }
+            self->businessThreadPool_->submit([self, conn, msg]() {
+                self->messageCallback_(conn, msg);
             });
         }
     );
 
     conn->setCloseCallback(
-        [this](const Connection::Ptr &conn) {
-            this->removeConnection(conn);
+        [self = shared_from_this()](const Connection::Ptr &conn) {
+            self->removeConnection(conn);
         });
 
     ioLoop->runInLoopThread([conn]() {

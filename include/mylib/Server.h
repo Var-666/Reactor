@@ -17,7 +17,7 @@
 #include "ConnectionTimeoutManager.h"
 #include "ThreadPool.h"
 
-class Server {
+class Server: public std::enable_shared_from_this<Server> {
 public:
     using ConnectionCallback = std::function<void(const Connection::Ptr&)>;
     using MessageCallback = Connection::MessageCallback;

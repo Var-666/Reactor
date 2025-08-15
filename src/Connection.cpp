@@ -4,6 +4,7 @@
 
 #include "mylib/Connection.h"
 #include "protocol/LengthHeaderProtocol.h"
+#include "logger/Logger.h"
 
 #include <unistd.h>
 #include <iostream>
@@ -137,6 +138,7 @@ void Connection::handleRead() {
     int savedErrno = 0;
     ssize_t n = inputBuffer_.readFd(socket_.fd(), &savedErrno);
     if (n > 0) {
+        LOG_DEBUG("fd=%d read %zd bytes", fd(), n);
         if (updateActivityCallback_) {
             updateActivityCallback_(fd());  // ✅ 更新活跃时间
         }
@@ -149,6 +151,7 @@ void Connection::handleRead() {
                 for (auto& msg : messages) {
                     if (messageCallback_) {
                         messageCallback_(shared_from_this(), msg);
+                        LOG_INFO("fd=%d received message: %s", fd(), msg.c_str());
                     }
                 }
             }
@@ -156,12 +159,15 @@ void Connection::handleRead() {
             if (messageCallback_) {
                 const std::string msg = inputBuffer_.retrieveAllAsString();
                 messageCallback_(shared_from_this(), msg);
+                LOG_INFO("fd=%d received raw message: %s", fd(), msg.c_str());
             }
         }
     }else if (n == 0) {
+        LOG_INFO("fd=%d peer closed connection", fd());
         handleClose();
     }else {
         if (savedErrno != EAGAIN && errno != EWOULDBLOCK) {
+            LOG_ERROR("fd=%d read error: %s", fd(), strerror(savedErrno));
             handleError();
         }
     }
@@ -189,10 +195,9 @@ void Connection::handleClose() {
         // 已经关闭，直接返回，避免重复处理
         return;
     }
-    std::cout << "handleClose called for fd=" << fd() << std::endl;
+    LOG_INFO("fd=%d handleClose called", fd());
     state_ = State::Disconnected;
     loop_->removeChannel(&channel_);
-    std::cout << "Channel removed for fd=" << fd() << std::endl;
     if (closeCallback_) {
         closeCallback_(shared_from_this());
     }

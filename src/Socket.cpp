@@ -20,6 +20,7 @@ Socket::Socket() {
     }
     int opt = 1;
     setsockopt(sockfd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    setNonBlocking(true); //设置为非阻塞
 }
 
 Socket::Socket(int fd):sockfd_(fd) {
@@ -54,6 +55,9 @@ int Socket::accept(sockaddr* addr) const {
     if (client_fd == -1) {
         throw std::runtime_error("Accept failed");
     }
+    // ✅ 设置 client_fd 非阻塞
+    int flags = fcntl(client_fd, F_GETFL, 0);
+    fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
     return client_fd;
 }
 

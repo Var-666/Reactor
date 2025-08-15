@@ -24,6 +24,9 @@ add_executable(reactor
         src/LengthHeaderProtocol.cpp
         src/Codec.cpp
         src/ThreadPool.cpp
+        src/Logger.cpp
+        src/LogFile.cpp
+        src/AsyncLogging.cpp
 )
 
 add_executable(test_client test_client.cpp
